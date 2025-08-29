@@ -40,27 +40,27 @@ Built with @bot-whatsapp/bot (Baileys provider), natural-language date parsing, 
 -(Optional) Google Cloud service account with Calendar API enabled.
 -(Optional) OpenAI API key for LLM date parsing and/or voice transcription.
 
-# Quick Start
+## Quick Start
 
-# 1) Clone
+1) Clone
 git clone <your-repo-url>
 cd <your-repo>
 
-# 2) Configure env
+2) Configure env
 cp .env.example .env
-# Edit .env with your values (see below)
+Edit .env with your values (see below)
 
-# 3) Install
+3) Install
 npm install
 
-# 4) Run (dev)
+) Run (dev)
 node app.js
-# A QR portal will open; scan it with the WhatsApp account used for the bot.
+A QR portal will open; scan it with the WhatsApp account used for the bot.
 
 
 ## Environment Variables (.env)
 
-# --- Google Calendar ---
+## --- Google Calendar ---
 GOOGLE_APPLICATION_CREDENTIALS=./secrets/google.json  # path to your service account JSON
 GOOGLE_CALENDAR_ID=primary                             # or your calendar ID
 
