@@ -5,236 +5,227 @@ const MockAdapter = require('@bot-whatsapp/database/mock');
 const { dateFlow } = require('./flows/date.flow');
 const { confirmationFlow } = require('./flows/date.flow');
 const { formFlow } = require('./flows/form.flow');
-const createWelcomeFlow = require('./flows/welcome.flow'); // Importar como función
+const createWelcomeFlow = require('./flows/welcome.flow'); // imported as factory
 
-// Flujo para el menú principal
+// Main menu flow
 const menuFlow = addKeyword('Lista', 'menu', 'opciones')
   .addAnswer(
-    `📋 *Menú Principal* 📋\n\nSelecciona una opción de la lista para continuar:\n\n` +
-    `1️⃣ *Agendar cita en el Hub* 🗓️\n` +
-    `2️⃣ *Preguntas Frecuentes* ❓\n` +
-    `3️⃣ *Quiero ser parte de PeYa* 🚴‍♂️\n` +
-    `0️⃣ *Salir* 👋\n\n` +
-    `Por favor, escribe el número de la opción que deseas elegir.`,
+    `📋 *Main Menu* 📋\n\nChoose an option to continue:\n\n` +
+    `1️⃣ *Schedule an appointment* 🗓️\n` +
+    `2️⃣ *Frequently Asked Questions* ❓\n` +
+    `3️⃣ *I want to join as a courier* 🚴‍♂️\n` +
+    `0️⃣ *Exit* 👋\n\n` +
+    `Please type the number of the option you want.`,
     { capture: true },
     async (ctx, { gotoFlow, fallBack, flowDynamic }) => {
-      switch (ctx.body.trim()) {
+      switch ((ctx.body || '').trim()) {
         case '1':
-          console.log("Usuario seleccionó '1': Agendar cita");
-          return gotoFlow(dateFlow); // Redirige al flujo de citas
+          console.log("User chose: schedule appointment");
+          return gotoFlow(dateFlow);
         case '2':
-          console.log("Usuario seleccionó '2': Preguntas frecuentes");
-          return gotoFlow(flowPreguntasFrecuentes); // Redirige al flujo de preguntas frecuentes
+          console.log("User chose: FAQs");
+          return gotoFlow(flowPreguntasFrecuentes);
         case '3':
-          console.log("Usuario seleccionó '3': Quiero ser parte de PeYa");
-          return gotoFlow(flowQuieroSerParte); // Redirige al flujo de "Quiero ser parte"
+          console.log("User chose: join courier program");
+          return gotoFlow(flowQuieroSerParte);
         case '0':
-          console.log("Usuario seleccionó '0': Salir");
+          console.log("User chose: exit");
           await flowDynamic(
-            "👋 *Saliendo...* Si necesitas algo más, puedes volver a escribir *Lista* para acceder nuevamente al menú. ¡Hasta luego!"
+            "👋 *Exiting...* If you need anything else, type *Lista* to open the menu again. See you soon!"
           );
           break;
         default:
-          console.log("Opción no válida:", ctx.body);
+          console.log("Invalid menu option selected.");
           return fallBack(
-            "⚠️ *Opción no válida.* Por favor selecciona una opción válida de la lista usando los números correspondientes."
+            "⚠️ *Invalid option.* Please choose a valid item from the list using the corresponding number."
           );
       }
     }
   );
 
-  const flowPreguntasFrecuentes = addKeyword(EVENTS.ACTION)
+const flowPreguntasFrecuentes = addKeyword(EVENTS.ACTION)
   .addAnswer(
-    `🙋‍♂️ *Preguntas Frecuentes* 🙋‍♀️\n\n¡Hola! Estas son algunas de las preguntas más comunes en nuestro centro de servicio. Por favor, selecciona el número de la opción que deseas conocer. 🤔\n\nSi tu pregunta no aparece aquí, no te preocupes, elige la opción *15️⃣ Otra consulta* y con gusto te ayudaremos. 💬\n\n
-1️⃣ *¿Cómo puedo recibir únicamente pedidos en efectivo?*\n
-2️⃣ *¿Por qué me descontaron dinero de mi cuenta?*\n
-3️⃣ *¿Cuándo recibiré el pago semanal en mi cuenta bancaria?*\n
-4️⃣ *¿Por qué no he recibido el pago por las fotos del menú?*\n
-5️⃣ *¿Cómo puedo congelar mi grupo?*\n
-6️⃣ *¿Qué significan los montos negativos en mi billetera?*\n
-7️⃣ *¿Por qué no he recibido las ganancias por referir a un amigo?*\n
-8️⃣ *¿Cómo realizo un pago a través de PagaTodo?*\n
-9️⃣ *¿Cómo registro mi cuenta bancaria en la aplicación?*\n
-🔟 *¿Cuál es el costo de los equipos para trabajar en PeYa?*\n
-1️⃣1️⃣ *¿Cómo puedo solicitar una carta de trabajo?*\n
-1️⃣2️⃣ *¿Cómo se realiza el pago semanal?*\n
-1️⃣3️⃣ *¿Por qué no estoy recibiendo pedidos en efectivo?*\n
-1️⃣4️⃣ *¿Puedo solicitar un acuerdo de pago?*\n
-1️⃣5️⃣ *Otra consulta* 🗣️`,
+    `🙋‍♂️ *Frequently Asked Questions* 🙋‍♀️\n\nHi! These are some common questions. Please type the number of the topic you want to see. 🤔\n\n` +
+`1️⃣ *How can I receive cash-only orders?*\n` +
+`2️⃣ *Why was money deducted from my account?*\n` +
+`3️⃣ *When will I receive my weekly payout?*\n` +
+`4️⃣ *Why haven’t I received payment for media submissions?*\n` +
+`5️⃣ *How can I pause my availability or group?*\n` +
+`6️⃣ *What do negative amounts in my wallet mean?*\n` +
+`7️⃣ *Why didn’t I get the referral bonus yet?*\n` +
+`8️⃣ *How do I make a payment via a local partner?*\n` +
+`9️⃣ *How do I register my bank account in the app?*\n` +
+`🔟 *What are typical equipment costs?*\n` +
+`1️⃣1️⃣ *How can I request a work/engagement letter?*\n` +
+`1️⃣2️⃣ *How is the weekly payout processed?*\n` +
+`1️⃣3️⃣ *Why am I not getting cash orders?*\n` +
+`1️⃣4️⃣ *Can I request a payment arrangement?*\n` +
+`1️⃣5️⃣ *Other inquiry* 🗣️`,
     { capture: true },
     async (ctx, { gotoFlow, fallBack, flowDynamic }) => {
-      switch (ctx.body.trim()) {
+      switch ((ctx.body || '').trim()) {
         case "1":
           await flowDynamic(
-            "💸 *Pedidos en efectivo*: El sistema distribuye los pedidos de forma automática y equitativa entre los repartidores según su zona. De esta manera, garantizamos la eficiencia y la equidad en las entregas. 🚀"
+            "💸 *Cash-only orders*: Order distribution is automated and may depend on region, compliance, and current policies. Cash availability can vary."
           );
           break;
         case "2":
           await flowDynamic(
-            "📉 *Deducciones*: Cada miércoles se realizan deducciones en tu billetera, relacionadas con el seguro, uso de la app e impuestos. Estos montos pueden variar según tus ganancias de la semana. Si tienes dudas, estamos aquí para ayudarte. 🤝"
+            "📉 *Deductions*: Payout statements can include fees, advances, adjustments, or taxes. Review your weekly statement for details."
           );
           break;
         case "3":
           await flowDynamic(
-            "🏦 *Pago semanal*: El pago se refleja en tu cuenta bancaria el jueves por la tarde o el viernes, dependiendo del banco. ¡No olvides revisar tu cuenta y cualquier actualización! 🔔"
+            "🏦 *Weekly payout*: Transfers are generally processed late Thursday or Friday depending on your bank. Check your payout status in-app."
           );
           break;
         case "4":
           await flowDynamic(
-            "📸 *Pago por fotos del menú*: Las fotos son verificadas en orden de llegada, y los pagos se ajustan cada dos viernes. Si aún no ves el pago, tu solicitud está en revisión. Gracias por tu paciencia. 🕵️‍♂️"
+            "📸 *Media submissions*: Reviews are handled in order of submission and payouts follow the platform’s schedule. If it’s pending, it’s still under review."
           );
           break;
         case "5":
           await flowDynamic(
-            "🧊 *Congelar grupo*: Ve al menú lateral en la pestaña *Rendimiento*, selecciona *Historial* y elige *Congelar grupo* en la parte superior. Si tienes dudas, no dudes en consultarnos. ❄️"
+            "🧊 *Pause availability/group*: Use your app’s *Availability/Status* controls to pause or adjust your working group if supported in your region."
           );
           break;
         case "6":
           await flowDynamic(
-            "📉 *Montos negativos en tu billetera*: Los ajustes negativos corresponden a avances de efectivo diarios. Cada miércoles se realiza un corte y tu saldo disponible se deposita si supera los RD$ 2,000. ¡Estamos aquí para cualquier duda! 💵"
+            "📉 *Negative wallet amounts*: These may reflect advances or adjustments. Settlements usually occur weekly; review your statement for specifics."
           );
           break;
         case "7":
           await flowDynamic(
-            "🎁 *Bono por referidos*: Para obtener el bono, la persona referida debe completar una cantidad mínima de pedidos durante sus primeros 7 días. ¡Invita a tus amigos y aprovecha los beneficios! 🕒"
+            "🎁 *Referral bonus*: Eligibility typically requires the referred person to complete a minimum number of tasks within a set time window."
           );
           break;
         case "8":
           await flowDynamic(
-            "💳 *Pago con PagaTodo*: Realiza tu depósito aquí: [https://peya.inswhub.com/pago](https://peya.inswhub.com/pago). Ingresa tu *Rider ID*, correo y monto. Luego, usa el código generado en cualquier punto PagaTodo. 🏪"
+            "💳 *Local partner payments*: Use your assigned reference code in the official portal/app and complete payment at an authorized location."
           );
           break;
         case "9":
           await flowDynamic(
-            "🏦 *Registro bancario*:\n1️⃣ Accede a tu perfil en el menú lateral.\n2️⃣ Selecciona *Perfil* y luego *Información Bancaria*.\n3️⃣ Carga un documento con tu nombre y número de cuenta.\n4️⃣ Ingresa tu número de cuenta y guarda los cambios. ¡Listo! ✅"
+            "🏦 *Bank account registration*:\n1) Open your profile in the app.\n2) Go to *Bank Information*.\n3) Provide required documents (matching name/account).\n4) Enter your account details and save."
           );
           break;
         case "10":
           await flowDynamic(
-            "🛍️ *Equipos y precios*:\n- Mochila: RD$ 3,000\n- T-shirt manga corta: RD$ 450\n- T-shirt manga larga: RD$ 480\n- Jacket: RD$ 1,100\n- Rainset: RD$ 1,570\n\n📍 *Depósito*: BHD 27475900019\nRecoge en el HUB (Calle F. Thomen) de lunes a jueves, 9am-3pm. 🕘"
+            "🛍️ *Equipment costs*: Pricing varies by region and supplier. Please check the official store or support channel for up-to-date information."
           );
           break;
         case "11":
           await flowDynamic(
-            "📄 *Carta de trabajo*: Como prestadores de servicio, no emitimos cartas laborales. Sin embargo, puedes usar el desglose de pago que enviamos cada miércoles para tus gestiones. 📧"
+            "📄 *Work/engagement letter*: If you’re an independent contractor, a formal employment letter may not apply. Use your payout statements as supporting documentation."
           );
           break;
         case "12":
           await flowDynamic(
-            "🗓️ *Métodos de pago semanal*:\n- *Adelanto diario*: Aparece en tu billetera según tus pedidos en efectivo.\n- *Depósito semanal*: Si tienes más de RD$ -2,000 el miércoles, depositamos el monto en tu cuenta el jueves. 💰"
+            "🗓️ *Weekly payout methods*: Advances may reflect in your wallet; weekly deposits are made if you meet the minimum balance and regional rules."
           );
           break;
         case "13":
           await flowDynamic(
-            "⚠️ *Pedidos en efectivo*: Los grupos 5 y 6 ya no reciben pedidos en efectivo. Sin embargo, los grupos 1, 2, 3 y 4 siguen aceptándolos. ¡Gracias por tu comprensión! 🙏"
+            "⚠️ *Cash orders*: Availability depends on region, risk controls, and policy. Not all groups or areas receive cash orders."
           );
           break;
         case "14":
           await flowDynamic(
-            "❌ *Acuerdos de pago*: No es posible realizar acuerdos de pago. Te sugerimos mantener tu billetera con al menos RD$ 900 para continuar ofreciendo tus servicios. 🚀"
+            "❌ *Payment arrangements*: Arrangements may not be available. Keep the recommended minimum wallet balance to avoid interruptions."
           );
           break;
         case "15":
-          return gotoFlow(flowConsultaOtra); // Redirige a otro flujo para consultas adicionales
+          return gotoFlow(flowConsultaOtra);
         default:
           return fallBack(
-            "⚠️ *Opción no válida.* Por favor, selecciona una opción del menú usando el número correspondiente. 😊"
+            "⚠️ *Invalid option.* Please select a menu item using the corresponding number. 😊"
           );
       }
-      return gotoFlow(flowFin); // Redirige al flujo final o siguiente
+      return gotoFlow(flowFin);
     }
   );
 
+const flowConsultaOtra = addKeyword(EVENTS.ACTION).addAnswer(
+  "🗣️ *Additional inquiry* 🗣️\n\nPlease describe your question so we can assist you better. 📝",
+  { capture: true },
+  async (ctx, ctxFn) => {
+    const consulta = (ctx.body || '').trim();
+    await ctxFn.flowDynamic(
+      `📌 *Your inquiry*: "${consulta}"\n\n🔍 *Tip*: If your account has an assigned support/fleet contact, reach out to them for personalized help.`
+    );
+    await ctxFn.flowDynamic(
+      "🚀 If you need more help, type *Lista* to open the menu again. We’re here to support you! 💪"
+    );
+  }
+);
 
-
-
-  const flowConsultaOtra = addKeyword(EVENTS.ACTION).addAnswer(
-    "🗣️ *Consulta adicional* 🗣️\n\nPor favor, describe tu consulta para que podamos ayudarte mejor. 📝",
-    { capture: true },
-    async (ctx, ctxFn) => {
-      const consulta = ctx.body.trim();
-      await ctxFn.flowDynamic(
-        `📌 *Tu consulta*: "${consulta}"\n\n🔍 *Sugerencia*: Te recomiendo acercarte a tu *fleet designado* para recibir asistencia personalizada.`
+const flowFin = addKeyword(EVENTS.ACTION).addAnswer(
+  "🔄 *What would you like to do next?*\n\n" +
+    "1️⃣ *Back to the options list* 📋\n" +
+    "2️⃣ *Back to FAQs* 📌\n" +
+    "0️⃣ *Exit* 👋\n\n" +
+    "Please type the number of your choice.",
+  { capture: true },
+  async (ctx, { gotoFlow, flowDynamic, fallBack }) => {
+    const userInput = (ctx.body || '').trim();
+    if (userInput === "1") {
+      console.log("User chose: back to list.");
+      return gotoFlow(menuFlow);
+    } else if (userInput === "0") {
+      console.log("User chose: exit.");
+      await flowDynamic(
+        "👋 *Exiting...* See you soon! If you need anything else, just write to us. 😊"
       );
-      await ctxFn.flowDynamic(
-        "🚀 *Si necesitas más ayuda*, vuelve a escribir *Lista* para acceder a las opciones disponibles. ¡Estamos aquí para apoyarte! 💪"
+    } else if (userInput === "2") {
+      console.log("User chose: FAQs.");
+      return gotoFlow(flowPreguntasFrecuentes);
+    } else {
+      console.log("Invalid option on finish screen.");
+      return fallBack(
+        "⚠️ *Invalid option.* Please choose a valid one:\n1️⃣ *Back to list* or 0️⃣ *Exit*."
       );
     }
-  );
-  
+  }
+);
 
-  const flowFin = addKeyword(EVENTS.ACTION).addAnswer(
-    "🔄 *¿Qué deseas hacer ahora?*\n\n" +
-      "1️⃣ *Volver a la lista de opciones* 📋\n" +
-      "2️⃣ *Volver a las preguntas frecuentes* 📌\n" +
-      "0️⃣ *Salir* 👋\n\n" +
-      "Por favor, escribe el número de la opción que prefieras.",
-    { capture: true },
-    async (ctx, { gotoFlow, flowDynamic, fallBack }) => {
-      const userInput = ctx.body.trim(); // Corrección del nombre userInput
-      
-      if (userInput === "1") {
-        console.log("Usuario seleccionó '1': Volver a la lista.");
-        return gotoFlow(menuFlow); // Regresa al flujo del menú principal
-      } else if (userInput === "0") {
-        console.log("Usuario seleccionó '0': Salir.");
-        await flowDynamic(
-          "👋 *Saliendo...* ¡Hasta pronto! Si necesitas algo más, no dudes en escribirnos. 😊"
-        );
-      } else if (userInput === "2") {
-        console.log("Usuario seleccionó '2': Preguntas frecuentes.");
-        return gotoFlow(flowPreguntasFrecuentes); // Flujo de preguntas frecuentes
-      } else {
-        console.log("Opción no válida:", userInput);
-        return fallBack(
-          "⚠️ *Opción no válida.* Por favor selecciona una opción válida: \n" +
-            "1️⃣ *Volver a la lista* o 0️⃣ *Salir*."
-        );
-      }
-    }
-  );
-  
-
-// Flujo de "Quiero ser parte"
+// “I want to join” flow (brand-neutral)
 const flowQuieroSerParte = addKeyword(EVENTS.ACTION)
   .addAnswer(
-    "🎉 *¡Genial! Nos encantaría tenerte como parte de PedidosYa Rider.* 🚴‍♂️\n\n" +
-    "Para comenzar el proceso de inscripción, visita el siguiente enlace: 👇\n\n" +
-    "🔗 [Regístrate aquí](https://www.repartosya.com.do/)\n\n" +
-    "📋 *Requisitos para ser Rider:*\n" +
-    "✔️ Tener al menos 18 años.\n" +
-    "✔️ Contar con una cédula de identidad o pasaporte vigente.\n" +
-    "✔️ Poseer moto propia (con seguro y carta de ruta al día). 🛵\n" +
-    "✔️ Tener un teléfono *iPhone 6s o superior* o *Android 9 o superior*, con internet y cámara frontal para estar siempre conectado. 📱\n\n" +
-    "💼 *¿Por qué unirte a PedidosYa Rider?*\n" +
-    "✨ Organiza tu semana a tu medida y elige tus horarios.\n" +
-    "🏙️ Reparte en la ciudad y zona que te convenga.\n" +
-    "💰 Genera ganancias semanales de forma rápida y fácil.\n\n" +
-    "🚀 *¡No pierdas esta oportunidad! Te estamos esperando.*"
+    "🎉 *Great! We’d love to have you join as a courier.* 🚴‍♂️\n\n" +
+    "To start the onboarding process, please visit the official signup page of your region or contact support for the correct link. 👇\n\n" +
+    "🔗 *Signup page:* https://example.com/signup (replace with your official link)\n\n" +
+    "📋 *Typical requirements may include:*\n" +
+    "✔️ Being at least 18 years old.\n" +
+    "✔️ Valid ID or passport.\n" +
+    "✔️ A suitable vehicle if required (with documents up to date).\n" +
+    "✔️ A compatible smartphone with internet and front camera. 📱\n\n" +
+    "💼 *Why join?*\n" +
+    "✨ Flexible scheduling.\n" +
+    "🏙️ Choose the areas where you want to operate (as available).\n" +
+    "💰 Weekly earnings depending on your activity and region.\n\n" +
+    "🚀 *We’re excited to hear from you!*"
   )
   .addAnswer(
-    "🔄 *¿Qué deseas hacer ahora?*\n\n" +
-    "1️⃣ *Volver a la lista de opciones* 📋\n" +
-    "0️⃣ *Salir* 👋\n\n" +
-    "Por favor, escribe el número de la opción que prefieras.",
+    "🔄 *What would you like to do next?*\n\n" +
+    "1️⃣ *Back to the options list* 📋\n" +
+    "0️⃣ *Exit* 👋\n\n" +
+    "Please type the number of your choice.",
     { capture: true },
     async (ctx, { gotoFlow, flowDynamic, fallBack }) => {
-      const userInput = ctx.body.trim();
-
+      const userInput = (ctx.body || '').trim();
       if (userInput === "1") {
-        console.log("Usuario seleccionó '1': Volver a la lista.");
-        return gotoFlow(menuFlow); 
+        console.log("User chose: back to list.");
+        return gotoFlow(menuFlow);
       } else if (userInput === "0") {
-        console.log("Usuario seleccionó '0': Salir.");
+        console.log("User chose: exit.");
         await flowDynamic(
-          "👋 ¡Hasta pronto! Si necesitas algo más, no dudes en escribirnos. 😊"
+          "👋 See you soon! If you need anything else, just write to us. 😊"
         );
         return;
       } else {
-        console.log("Opción no válida:", userInput);
+        console.log("Invalid option in join flow.");
         return fallBack(
-          "⚠️ *Opción no válida.* Por favor selecciona una opción válida: \n" +
-          "1️⃣ *Volver a la lista* o 0️⃣ *Salir*."
+          "⚠️ *Invalid option.* Please choose:\n1️⃣ *Back to list* or 0️⃣ *Exit*."
         );
       }
     }
@@ -242,34 +233,42 @@ const flowQuieroSerParte = addKeyword(EVENTS.ACTION)
 
 module.exports = { flowQuieroSerParte };
 
-// Crear el flujo de bienvenida pasando menuFlow
+// Create welcome flow passing menuFlow
 const welcomeFlow = createWelcomeFlow(menuFlow);
 
-// Flujo principal, que redirige según la intención del usuario
+// Main flow: route based on user intent
 const flowPrincipal = addKeyword(EVENTS.WELCOME)
   .addAction(async (ctx, ctxFn) => {
-    const bodyText = ctx.body.toLowerCase().trim(); // Elimina espacios adicionales y estandariza el texto
-    
-    // Palabras clave para detección de citas
+    const bodyText = (ctx.body || '').toLowerCase().trim();
+
+    // Spanish keywords preserved to avoid logic changes
     const keywordDate = ['agendar', 'cita', 'reunion', 'turno'];
     const containsKeywordDate = keywordDate.some(keyword => bodyText.includes(keyword));
-    
+
     if (containsKeywordDate) {
-      console.log("📅 Palabra clave de cita detectada, redirigiendo al flujo de fecha...");
-      return ctxFn.gotoFlow(dateFlow); // Redirige al flujo de citas
+      console.log("📅 Appointment keyword detected → redirecting to date flow...");
+      return ctxFn.gotoFlow(dateFlow);
     }
 
-    // Redirige al flujo de bienvenida si no se detecta ninguna palabra clave de cita
-    console.log("👋 Redirigiendo al flujo de bienvenida por defecto...");
-    return await ctxFn.gotoFlow(welcomeFlow); // Redirige al flujo de bienvenida
+    console.log("👋 Redirecting to default welcome flow...");
+    return await ctxFn.gotoFlow(welcomeFlow);
   });
 
-
-
-// Inicialización del bot
+// Bot initialization
 const main = async () => {
   const adapterDB = new MockAdapter();
-  const adapterFlow = createFlow([flowPrincipal, dateFlow, formFlow, welcomeFlow, menuFlow, flowFin, flowPreguntasFrecuentes, flowConsultaOtra, confirmationFlow, flowQuieroSerParte]);
+  const adapterFlow = createFlow([
+    flowPrincipal,
+    dateFlow,
+    formFlow,
+    welcomeFlow,
+    menuFlow,
+    flowFin,
+    flowPreguntasFrecuentes,
+    flowConsultaOtra,
+    confirmationFlow,
+    flowQuieroSerParte
+  ]);
   const adapterProvider = createProvider(BaileysProvider);
 
   createBot({

@@ -1,74 +1,89 @@
-const { chat } = require('./chatgpt'); // Importar tu función de ChatGPT
+const { chat } = require('./chatgpt'); // Import your ChatGPT function
 const { DateTime } = require('luxon');
 
-/** 
- * @param {string} iso - Fecha en formato ISO 
- * @returns {string} - Fecha en formato legible
- **/
+/**
+ * Formats an ISO datetime into a readable string using TZ/LANG.
+ * @param {string} iso - ISO string
+ * @returns {string} - Human-readable date string
+ */
 function iso2text(iso) {
-    try {
-        const dateTime = DateTime.fromISO(iso, { zone: 'utc' }).setZone('America/El_Salvador');
+  try {
+    const TIMEZONE = process.env.TZ || 'America/Santo_Domingo';
+    const LOCALE = process.env.LANG || 'en-US';
 
-        const formattedDate = dateTime.toLocaleString({
-            weekday: 'long',
-            day: '2-digit',
-            month: 'long',
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: false,
-            timeZoneName: 'short'
-        });
+    const dateTime = DateTime.fromISO(iso, { zone: 'utc' })
+      .setZone(TIMEZONE)
+      .setLocale(LOCALE);
 
-        return formattedDate;
-    } catch (error) {
-        console.error('Error al convertir la fecha: ' + error);
-        return 'Formato de fecha no válido';
-    }
+    const formattedDate = dateTime.toLocaleString({
+      weekday: 'long',
+      day: '2-digit',
+      month: 'long',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+      timeZoneName: 'short',
+    });
+
+    return formattedDate;
+  } catch (error) {
+    console.error('Error converting date:', error?.message || error);
+    return 'Invalid date format';
+  }
 }
 
-/** 
- * @param {string} text - Texto con fecha en lenguaje natural
- * @returns {Promise<string>} - Fecha en formato ISO o 'false' si no es válida
- **/
+/**
+ * Extracts a datetime from natural language using the LLM, returning ISO or 'false'.
+ * @param {string} text - Natural language text containing a date/time
+ * @returns {Promise<string>} - ISO string or 'false' if invalid
+ */
 async function text2iso(text) {
-    const currentDate = new Date();
-   
-    const prompt = `La fecha actual es: ${currentDate.toISOString()}. Te daré un texto que contiene una fecha o un tiempo. 
+  const currentDate = new Date();
+  const TIMEZONE = process.env.TZ || 'America/Santo_Domingo';
+  const LOCALE = process.env.LANG || 'en-US';
 
-Texto: "${text}"
+  const prompt = `Current datetime (ISO): ${currentDate.toISOString()}
+Timezone: ${TIMEZONE}
+Locale: ${LOCALE}
 
-Necesito que extraigas la fecha y la hora de este texto y que respondas exclusivamente con esa fecha y hora en formato ISO. Considera que "este jueves" se refiere al próximo jueves en la semana actual. Si no se puede extraer una fecha válida, responde 'false'.
+You will receive a text that contains a date and/or time expressed in natural language.
 
-Ejemplos:
-- "El viernes 20 de octubre a las 9 am" debe ser 2024-10-20T09:00:00.000.
-- "Este viernes a las 9 am" debe ser 2024-10-20T09:00:00.000, considerando que hoy es ${currentDate.toLocaleDateString()}.
-- "Mañana a las 10 am" debe ser 2024-10-16T10:00:00.000.
-- "El lunes" debe ser 2024-10-16T10:00:00.000.
-- "Jueves a las 9 de la mañana" debe ser 2024-10-19T09:00:00.000, considerando que hoy es ${currentDate.toLocaleDateString()}.
+Text: "${text}"
+
+Your task:
+1) Extract the intended exact datetime.
+2) Reply **only** with that datetime in ISO 8601 (e.g., 2025-08-28T15:00:00.000Z). No extra words, no code fences, no quotes.
+3) Treat relative phrases accordingly (e.g., "tomorrow", "this Thursday", "next Monday"). "This Thursday" refers to the next occurrence of Thursday relative to the *current* date above.
+4) If you cannot determine a valid datetime, reply exactly: false
+
+Examples (illustrative; use the current datetime at the top for resolution):
+- "Friday at 9 am" → 2025-10-17T09:00:00.000-04:00 (example; include offset or Z as appropriate)
+- "Tomorrow 10 am" → 2025-10-16T10:00:00.000-04:00
+- "Thursday 9 in the morning" → 2025-10-19T09:00:00.000-04:00
 `;
 
-    const messages = [{ role: "user", content: prompt }];
-    
-    console.log('Texto proporcionado:', text);
+  console.log('Natural-language date received.');
 
-    const response = await chat(prompt, messages);
-    
-    console.log('Respuesta completa de ChatGPT:', response);
-    const trimmedResponse = response.trim();
-    console.log('Respuesta de ChatGPT:', trimmedResponse);
+  const messages = [{ role: 'user', content: prompt }];
+  const response = await chat(prompt, messages);
 
-    if (trimmedResponse === 'false') {
-        console.error('Error: No se pudo extraer una fecha válida del texto.');
-        return 'false';
-    }
 
-    const date = new Date(trimmedResponse);
-    if (isNaN(date.getTime())) {
-        console.error('Error: La fecha generada no es válida.');
-        return 'false';
-    }
+  console.log('LLM response received.');
 
-    return trimmedResponse;
+  const trimmedResponse = String(response || '').trim();
+
+  if (trimmedResponse === 'false') {
+    console.error('No valid date could be extracted from the text.');
+    return 'false';
+  }
+
+  const parsed = new Date(trimmedResponse);
+  if (Number.isNaN(parsed.getTime())) {
+    console.error('Generated datetime is invalid.');
+    return 'false';
+  }
+
+  return trimmedResponse;
 }
 
 module.exports = { text2iso, iso2text };

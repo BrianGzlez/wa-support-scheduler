@@ -3,65 +3,63 @@ const { createEvent } = require("../scripts/calendar");
 
 const formFlow = addKeyword(EVENTS.ACTION)
   .addAnswer(
-    "🎉 *¡Excelente!* Vamos a agendar tu cita. 😊\n\n" +
-    "📝 *Primero*, ¿cuál es tu nombre completo?",
+    "🎉 *Great!* Let's schedule your appointment. 😊\n\n" +
+    "📝 *First*, what's your full name?",
     { capture: true },
     async (ctx, ctxFn) => {
-      await ctxFn.state.update({ tempName: ctx.body.trim() }); // Guardamos temporalmente el nombre
-      console.log(`📥 Nombre capturado: ${ctx.body}`);
+      await ctxFn.state.update({ tempName: (ctx.body || '').trim() }); // store name temporarily
+      console.log("📥 Name captured.");
     }
   )
   .addAnswer(
-    "🔢 *Gracias.* Ahora, ¿cuál es tu *Rider ID*?",
+    "🔢 *Thanks.* Now, what's your *reference ID*?",
     { capture: true },
     async (ctx, ctxFn) => {
       const state = await ctxFn.state.getMyState();
-      const fullName = state.tempName; // Recuperamos el nombre
+      const fullName = state.tempName; // retrieve name
 
-      // Guardamos el nombre junto con el Rider ID en el campo `name`
-      const riderId = ctx.body.trim();
-      const completeName = `${fullName} - ${riderId}`;
+      // Store the name together with the reference ID in `name`
+      const refId = (ctx.body || '').trim();
+      const completeName = `${fullName} - ${refId}`;
       await ctxFn.state.update({ name: completeName });
 
-      console.log(`📥 Nombre y Rider ID almacenados: ${completeName}`);
+      console.log("📥 Name and reference ID stored.");
     }
   )
   .addAnswer(
-    "💼 *Perfecto.* Por último, ¿cuál es el *motivo* de tu turno? 📝\n\n" +
-    "Por favor, escribe la razón por la cual deseas agendar tu turno. Si tienes algún ticket creado, inclúyelo al final del texto para agilizar el proceso. 🔍\n\n" +
-    "*Ejemplo de descripción:*\n" +
-    "👉 *Motivo:* Solicito asistencia para actualizar mis documentos en la plataforma.\n" +
+    "💼 *Perfect.* Lastly, what's the *reason* for your appointment? 📝\n\n" +
+    "Please write the reason for booking. If you already have a ticket, include it at the end to speed things up. 🔍\n\n" +
+    "*Example:*\n" +
+    "👉 *Reason:* I need assistance to update my documents on the platform.\n" +
     "👉 *Ticket:* #123456\n\n" +
-    "Este formato nos ayudará a brindarte un servicio más rápido y eficiente. 🚀",
+    "This format helps us provide faster and more efficient service. 🚀",
     { capture: true },
     async (ctx, ctxFn) => {
-      await ctxFn.state.update({ motive: ctx.body.trim() });
-      console.log(`📥 Motivo almacenado: ${ctx.body}`);
+      await ctxFn.state.update({ motive: (ctx.body || '').trim() });
+      console.log("📥 Reason stored.");
     }
   )
   
   .addAnswer(
-    "🚀 *¡Cita creada exitosamente!* Te esperamos el día acordado. 🗓️\n\n" +
-    "💬 Si necesitas más ayuda, no dudes en contactarnos. ¡Estamos aquí para ti! 🤗",
+    "🚀 *Appointment created successfully!* We'll see you on the agreed date. 🗓️\n\n" +
+    "💬 If you need more help, feel free to contact us. We're here for you! 🤗",
     null,
     async (ctx, ctxFn) => {
       try {
         const userInfo = await ctxFn.state.getMyState();
         const { name, motive, date } = userInfo;
 
-        console.log(`📋 Creando evento para: ${name}, Motivo: ${motive}, Fecha: ${date}`);
-
-        // Crear el evento en el calendario
+        console.log("📋 Creating calendar event...");
+        
         const eventId = await createEvent(name, motive, date);
 
-        console.log(`✅ Evento creado con ID: ${eventId}`);
+        console.log("✅ Event created.");
 
-        // Limpiar estado del usuario
         await ctxFn.state.clear();
       } catch (error) {
-        console.error("❌ Error al crear el evento:", error);
+        console.error("❌ Error creating the event:", error);
         await ctxFn.flowDynamic(
-          "⚠️ *Hubo un problema creando tu cita.* Por favor, intenta nuevamente más tarde. 😥"
+          "⚠️ *There was a problem creating your appointment.* Please try again later. 😥"
         );
       }
     }

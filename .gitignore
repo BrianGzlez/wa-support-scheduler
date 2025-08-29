@@ -1,1 +1,67 @@
-node_modules
+# =========================
+# Node / Package managers
+# =========================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.eslintcache
+
+# =========================
+# Env & Secrets
+# =========================
+.env
+.env.*
+secrets/
+google.json
+*.pem
+*.key
+*.p12
+
+# =========================
+# WhatsApp / Sessions / QR
+# =========================
+bot_sessions/
+.sessions/
+session-*.json
+auth_info*
+bot.qr.png
+
+# =========================
+# Logs / Debug / Reports
+# =========================
+*.log
+logs/
+pids/
+report.*.json
+*.pid
+*.seed
+*.tgz
+
+# =========================
+# Build / Artifacts / Caches
+# =========================
+dist/
+build/
+lib/
+out/
+coverage/
+.nyc_output/
+.cache/
+.tmp/
+tmp/
+
+# =========================
+# Audio/Media temporales
+# =========================
+voice-note-*.mp3
+voice-note-*.ogg
+
+# =========================
+# Editors / OS files
+# =========================
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
