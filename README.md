@@ -1,124 +1,168 @@
-# WhatsApp Support and Appointment Bot
+# Conversational AI Scheduler — WhatsApp Booking Assistant
 
-A simple WhatsApp chatbot for support, FAQs, and appointment scheduling.
-Built with @bot-whatsapp/bot (Baileys provider), optional Google Calendar, and optional OpenAI.
+> AI-powered conversational system for automated customer support and scheduling via WhatsApp.
 
-NOTE: This project uses an unofficial WhatsApp library (Baileys). For production, consider the WhatsApp Business Platform and review WhatsApp Terms of Service.
+---
 
-## Features
+## The Problem
 
-- Welcome and main menu flows
-- Appointment flow with natural-language dates (e.g., "next Monday 9am", "tomorrow 3 pm")
-- Confirmation + form flow (name, optional reference ID, reason)
-- Google Calendar integration (15-minute slots, configurable workdays/hours)
-- FAQ flow and a neutral "join as courier" info flow
-- Voice notes to text via OpenAI Whisper (optional)
-- Locale and timezone via environment variables (LANG, TZ)
-- No secrets in code: .env.example + .gitignore included
+Businesses lose time and customers managing appointment scheduling and support manually. Repetitive questions, missed bookings, and no 24/7 availability create friction that hurts retention.
+
+## The Solution
+
+A fully automated WhatsApp assistant that handles customer support and appointment booking end-to-end — no human intervention required for routine interactions.
+
+Built with conversational flows, Google Calendar integration, OpenAI-powered responses, and voice message transcription (Whisper).
+
+---
+
+## Key Features
+
+| Feature | Description |
+|---|---|
+| 🗓️ **Smart Scheduling** | Books appointments in 15-min slots, Mon–Fri, with real-time availability checks |
+| 🧠 **AI Responses** | OpenAI-powered answers for FAQs and open-ended queries |
+| 🎙️ **Voice Input** | Transcribes voice notes via OpenAI Whisper — a rare differentiator |
+| 📅 **Calendar Integration** | Syncs directly with Google Calendar; creates events automatically |
+| 💬 **Conversational Flows** | Natural-language date parsing ("next Monday 9am", "tomorrow 3pm") |
+| ⚙️ **Configurable Logic** | Working hours, slot size, locale, and timezone via environment variables |
+| 🔒 **Secure by Default** | No secrets in code — `.env`-based config, `.gitignore` pre-configured |
+
+---
+
+## How It Works
+
+```
+User sends WhatsApp message
+        │
+        ▼
+  Welcome Flow → Main Menu
+        │
+   ┌────┴────────────────┐
+   │                     │
+Schedule Appointment    FAQs / Support
+   │                     │
+Natural-language      AI-powered or
+date parsing          predefined answers
+   │
+Availability check (Google Calendar)
+   │
+Confirmation → Event created
+```
+
+1. **Welcome flow** greets the user and presents the main menu
+2. **Scheduling flow** parses natural-language dates, checks real-time availability, collects user info (name, reason), and creates the calendar event
+3. **FAQ flow** handles 15 common support topics with neutral, configurable answers
+4. **Voice flow** (optional) downloads audio, converts OGG → MP3, and transcribes with Whisper
+5. **AI fallback** handles open-ended queries via OpenAI chat completion
+
+---
+
+## Tech Stack
+
+- **Runtime**: Node.js 18+
+- **WhatsApp**: [@bot-whatsapp/bot](https://github.com/codigoencasa/bot-whatsapp) with Baileys provider
+- **Calendar**: Google Calendar API (service account)
+- **AI**: OpenAI GPT (chat) + Whisper (transcription)
+- **Date parsing**: Luxon
+- **Containerization**: Docker
+
+> ⚠️ This project uses Baileys, an unofficial WhatsApp library. For production at scale, evaluate the [WhatsApp Business Platform](https://business.whatsapp.com/) and review WhatsApp's Terms of Service.
+
+---
 
 ## Project Structure
 
 ```
 .
-├─ app.js
-├─ flows/
-│  ├─ welcome.flow.js
-│  ├─ date.flow.js
-│  └─ form.flow.js
-├─ scripts/
-│  ├─ calendar.js
-│  ├─ chatgpt.js
-│  ├─ utils.js
-│  └─ voice.js   (optional)
-├─ .env.example
-├─ .gitignore
-└─ README.md
+├── app.js                  # Bot initialization and main routing
+├── flows/
+│   ├── welcome.flow.js     # Greeting and menu entry point
+│   ├── date.flow.js        # Appointment scheduling + confirmation
+│   └── form.flow.js        # User data collection (name, reason, ID)
+├── scripts/
+│   ├── calendar.js         # Google Calendar availability + event creation
+│   ├── chatgpt.js          # OpenAI chat completion wrapper
+│   ├── utils.js            # Natural-language date parser (text2iso)
+│   └── voice.js            # Whisper transcription (optional)
+├── Dockerfile
+├── .env.example
+└── .gitignore
 ```
 
-## Requirements
-
-- Node.js 18 or newer
-- A WhatsApp account to pair via QR (Baileys)
-- (Optional) Google Cloud service account with Calendar API enabled
-- (Optional) OpenAI API key for chat and/or transcription
+---
 
 ## Quick Start
 
 ```bash
-# 1) Clone
+# 1. Clone the repo
 git clone <your-repo-url>
 cd <your-repo>
 
-# 2) Configure env
+# 2. Set up environment
 cp .env.example .env
-# Edit .env with your values
+# Edit .env with your credentials
 
-# 3) Install
+# 3. Install dependencies
 npm install
 
-# 4) Run (dev)
+# 4. Run
 node app.js
-# A QR portal will open; scan it with the WhatsApp account you will use for the bot.
+# A QR portal opens — scan it with the WhatsApp account for the bot
 ```
 
-## Environment Variables (.env)
+---
+
+## Environment Variables
 
 ```ini
 # Google Calendar
-GOOGLE_APPLICATION_CREDENTIALS=./secrets/google.json   # path to your service account JSON
-GOOGLE_CALENDAR_ID=primary                              # or your calendar ID
+GOOGLE_APPLICATION_CREDENTIALS=./secrets/google.json   # Service account JSON path
+GOOGLE_CALENDAR_ID=primary                              # Or your specific calendar ID
 
 # Locale / Timezone
 TZ=America/Santo_Domingo
 LANG=en-US
 
-# OpenAI (optional)
+# OpenAI (optional — enables AI responses and voice transcription)
 OPENAI_API_KEY=
 OPENAI_MODEL=gpt-4o-mini
 OPENAI_TRANSCRIPTION_MODEL=whisper-1
 ```
 
-Put your JSON at the path set in GOOGLE_APPLICATION_CREDENTIALS (for example: ./secrets/google.json).
-Never commit secrets or session files. The .gitignore in this repo is configured to help.
+Place your Google service account JSON at the path defined in `GOOGLE_APPLICATION_CREDENTIALS`. Never commit secrets or session files — `.gitignore` is pre-configured to prevent this.
 
-## How It Works
+---
 
-- Welcome flow greets and offers options
-- Menu flow routes to:
-  - Schedule appointment -> flows/date.flow.js
-    - Parses natural-language dates with scripts/utils.text2iso()
-    - Checks availability with scripts/calendar.js (Mon-Fri, 09:00-17:00 by default, 15-min slots)
-    - On confirmation, creates the event with createEvent()
-  - FAQs -> predefined neutral answers
-  - Join -> generic info; replace the signup link with your official URL
-- Voice notes (optional) -> scripts/voice.js downloads audio, converts OGG to MP3, transcribes with Whisper
+## Configuration
 
-## Customization
+| Setting | File | Variable |
+|---|---|---|
+| Working hours & slot size | `scripts/calendar.js` | `rangeLimit`, `standardDurationMinutes` |
+| Working days | `scripts/calendar.js` | `rangeLimit.days` |
+| Locale & timezone | `.env` | `LANG`, `TZ` |
+| AI model | `.env` | `OPENAI_MODEL` |
+| Transcription model | `.env` | `OPENAI_TRANSCRIPTION_MODEL` |
 
-- Working hours/days/slot size: edit rangeLimit and standardDurationMinutes in scripts/calendar.js
-- Locale and timezone: set LANG and TZ in .env
-- Calendar: set GOOGLE_CALENDAR_ID (primary or a specific ID)
-- Models: set OPENAI_MODEL and OPENAI_TRANSCRIPTION_MODEL in .env
+---
 
 ## Security
 
-- No API keys or calendar IDs are hardcoded. Use .env
-- .gitignore prevents committing .env, secrets/, WhatsApp sessions, logs, and temp media
-- If you accidentally committed secrets:
-  1) Revoke the exposed keys
-  2) Rewrite history with BFG or git filter-repo
+- No API keys or credentials hardcoded — all via `.env`
+- `.gitignore` excludes `.env`, `secrets/`, WhatsApp session files, logs, and temp media
+- If you accidentally committed secrets: revoke them immediately, then rewrite history with [BFG Repo Cleaner](https://rtyley.github.io/bfg-repo-cleaner/) or `git filter-repo`
 
-## Commands
+---
+
+## Docker
 
 ```bash
-# Run
-node app.js
-
-# (optional) Lint / Test if you add them
-npm run lint
-npm test
+docker build -t conversational-ai-scheduler .
+docker run --env-file .env conversational-ai-scheduler
 ```
+
+---
 
 ## License
 
-MIT (see LICENSE)
+MIT
