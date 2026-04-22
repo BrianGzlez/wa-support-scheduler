@@ -40,8 +40,8 @@ const confirmationFlow = addKeyword(EVENTS.ACTION).addAnswer(
     const userResponse = (ctx.body || "").trim().toLowerCase();
     console.log("📥 User response:", ctx.body, "→ parsed:", userResponse);
 
-    const YES = ["1", "yes", "y", "ok", "okay", "confirm", "sí", "si"];
-    const NO = ["2", "no", "n", "cancel", "cancelar"];
+    const YES = ["1", "yes", "y", "ok", "okay", "confirm", "si"];
+    const NO = ["2", "no", "n", "cancel"];
 
     if (YES.includes(userResponse)) {
       if (!formFlow) {
