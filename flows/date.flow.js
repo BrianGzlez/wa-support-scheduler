@@ -4,89 +4,96 @@ const { isDateAvailable, getClosestAvailableSlot } = require("../scripts/calenda
 const { chat } = require("../scripts/chatgpt");
 const { formFlow } = require("./form.flow");
 
-// ===== Locale/Timezone helpers (no hardcoded brand/region) =====
+// ─── Locale / Timezone ────────────────────────────────────────────────────────
 const LOCALE = process.env.LANG || "en-US";
-const TIMEZONE = process.env.TZ || "America/Santo_Domingo";
+const TIMEZONE = process.env.TZ || "America/New_York";
 
-function formatLocalizedDate(date, locale = LOCALE, timeZone = TIMEZONE) {
-  return new Date(date).toLocaleString(locale, {
+function formatLocalizedDate(date) {
+  return new Date(date).toLocaleString(LOCALE, {
     weekday: "long",
     year: "numeric",
     month: "long",
     day: "numeric",
     hour: "numeric",
     minute: "numeric",
-    timeZone,
+    timeZone: TIMEZONE,
   });
 }
 
-// ===== System prompt (brand-neutral) =====
-const promptBase = `
-You are a virtual assistant that helps users schedule appointments through conversation.
-Your only goal is to help the user choose a date and time.
-You can understand both exact dates ("Thursday May 30 2024 at 10:00am") and relative dates ("tomorrow at 3 pm", "next Monday at 11 am", "in two weeks").
-If the user provides a relative date, convert it to an exact date before checking availability.
-I will give you the requested date and whether it is available.
-If availability is true, answer clearly that the requested date is available and restate it in natural language.
-If availability is false, recommend the closest available slot in natural language.
-Keep responses concise and friendly.
-`;
+// ─── System prompt ────────────────────────────────────────────────────────────
+const SCHEDULING_PROMPT = `
+You are a friendly scheduling assistant helping users book appointments via WhatsApp.
+Your only goal is to confirm or suggest appointment times.
+You will receive the requested date and its availability status.
+- If available: confirm the date clearly and naturally.
+- If unavailable: suggest the closest available slot in a friendly tone.
+Keep responses short, warm, and conversational. No bullet points or markdown.
+`.trim();
 
-// ===== Confirmation flow =====
+// ─── LLM helper (defined once, reused across flows) ──────────────────────────
+async function replyWithLLM(systemPrompt, userMessage, fallback) {
+  try {
+    return await chat(systemPrompt, [{ role: "user", content: userMessage }]);
+  } catch (err) {
+    console.warn("LLM error, using fallback:", err?.message || err);
+    return fallback;
+  }
+}
+
+// ─── Confirmation flow ────────────────────────────────────────────────────────
 const confirmationFlow = addKeyword(EVENTS.ACTION).addAnswer(
-  "✅ *Confirmation required*\n\nPlease choose an option:\n\n1️⃣ *Yes*\n2️⃣ *No*\n\nType the number or the word.",
+  "✅ *Would you like to confirm this appointment?*\n\n1️⃣ *Yes, confirm*\n2️⃣ *No, cancel*",
   { capture: true },
   async (ctx, ctxFn) => {
     const userResponse = (ctx.body || "").trim().toLowerCase();
-    console.log("📥 User response:", ctx.body, "→ parsed:", userResponse);
 
-    const YES = ["1", "yes", "y", "ok", "okay", "confirm", "si"];
-    const NO = ["2", "no", "n", "cancel"];
+    const YES = ["1", "yes", "y", "ok", "okay", "confirm"];
+    const NO  = ["2", "no", "n", "cancel"];
 
     if (YES.includes(userResponse)) {
       if (!formFlow) {
         console.error("❌ formFlow is not defined.");
         return ctxFn.flowDynamic(
-          "⚠️ *Error*: The form is not available right now. Please try again later."
+          "⚠️ *Error*: The booking form is unavailable right now. Please try again later."
         );
       }
-      await ctxFn.flowDynamic("📋 *Taking you to the form...*");
+      await ctxFn.flowDynamic("📋 *Taking you to the booking form...*");
       return ctxFn.gotoFlow(formFlow);
     }
 
     if (NO.includes(userResponse)) {
-      await ctxFn.endFlow(
-        "❌ *Booking cancelled.* You can start again anytime. 🚀"
+      return ctxFn.endFlow(
+        "❌ *Booking cancelled.* No worries — type *menu* whenever you want to try again. 🚀"
       );
-      return;
     }
 
-    return ctxFn.flowDynamic(
-      "⚠️ *Invalid option.* Please choose *1* for *Yes* or *2* for *No*."
+    return ctxFn.fallBack(
+      "⚠️ *Invalid option.* Please reply *1* to confirm or *2* to cancel."
     );
   }
 );
 
-// ===== Date handling flow =====
+// ─── Date flow ────────────────────────────────────────────────────────────────
 const dateFlow = addKeyword(EVENTS.ACTION)
   .addAnswer(
-    "📅 *Great!* What day and time would you like?\n\nFor example: *Thursday at 3 pm*.",
+    "📅 *When would you like your appointment?*\n\nJust tell me naturally — for example:\n• *Tomorrow at 3 pm*\n• *Next Monday at 10 am*\n• *Friday May 30 at 9:00 am*",
     { capture: true }
   )
   .addAnswer(
-    "🔍 *Checking availability...* This may take a few seconds…",
+    "🔍 *Checking availability...* One moment please.",
     null,
     async (ctx, ctxFn) => {
       try {
         const raw = (ctx.body || "").trim();
-        console.log("📥 Raw date text:", raw);
+        console.log("📥 Raw date input:", raw);
 
+        // Step 1: Parse natural language to ISO
         const iso = await text2iso(raw);
         console.log("📅 Parsed ISO:", iso);
 
-        if (!iso || typeof iso !== "string" || iso.toLowerCase() === "false") {
+        if (!iso || iso.toLowerCase() === "false") {
           return ctxFn.endFlow(
-            "⚠️ *I couldn't understand that date.* Please try again with a clearer format (e.g., *Thursday May 30 at 10:00 am*)."
+            "⚠️ *I couldn't understand that date.* Please try again with a clearer format, like *Thursday at 3 pm* or *May 30 at 10 am*."
           );
         }
 
@@ -97,78 +104,66 @@ const dateFlow = addKeyword(EVENTS.ACTION)
           );
         }
 
+        // Step 2: Reject past dates
         const now = new Date();
         if (startDate.getTime() < now.getTime() - 2 * 60 * 1000) {
-          return ctxFn.flowDynamic(
-            "⚠️ *That time is in the past.* Please choose a future date. 📆"
+          return ctxFn.endFlow(
+            "⚠️ *That time is in the past.* Please choose a future date and time. 📆"
           );
         }
 
-        let available = await isDateAvailable(startDate);
-        console.log("📊 Availability:", available);
-
-        async function replyWithLLM(prompt, msgs) {
-          try {
-            return await chat(prompt, msgs);
-          } catch (e) {
-            console.warn("LLM error, falling back:", e?.message || e);
-            return "Here’s what I found.";
-          }
-        }
-
-        const messages = [{ role: "user", content: raw }];
+        // Step 3: Check availability
+        const available = await isDateAvailable(startDate);
+        console.log("📊 Available:", available);
 
         if (!available) {
+          // Try to find the closest available slot
+          const nextSlot = await getClosestAvailableSlot(startDate);
 
-          const next = await getClosestAvailableSlot(startDate);
-          const nextDate =
-            next && next.start instanceof Date
-              ? next.start
-              : next && !(next instanceof Date)
-                ? new Date(next.start || next)
-                : next;
-
-          if (!nextDate || Number.isNaN(new Date(nextDate).getTime())) {
+          if (!nextSlot) {
             return ctxFn.endFlow(
-              "⚠️ There are no available dates right now. Please try again later. 🕒"
+              "😔 *No available slots found for that day.* Our schedule is fully booked. Please try a different date or contact us directly."
+            );
+          }
+
+          const nextDate = nextSlot.start instanceof Date
+            ? nextSlot.start
+            : new Date(nextSlot.start);
+
+          if (Number.isNaN(nextDate.getTime())) {
+            return ctxFn.endFlow(
+              "⚠️ *Could not find a valid alternative slot.* Please try again with a different date."
             );
           }
 
           const nextText = formatLocalizedDate(nextDate);
-          console.log("📅 Closest available:", nextText);
-
-          const llmText = await replyWithLLM(
-            `${promptBase}
-Current time: ${now.toISOString()}
-Requested date: ${startDate.toISOString()}
-Availability: false. Closest available: ${nextText}.`,
-            messages
+          const llmReply = await replyWithLLM(
+            SCHEDULING_PROMPT,
+            `The user requested: "${raw}". That slot is unavailable. The closest available slot is: ${nextText}.`,
+            `That slot is taken, but I found the next available time: *${nextText}*. Would you like to book it?`
           );
 
-          await ctxFn.flowDynamic(llmText);
+          await ctxFn.flowDynamic(llmReply);
           await ctxFn.state.update({ date: nextDate });
           return ctxFn.gotoFlow(confirmationFlow);
         }
 
-        // Available
+        // Slot is available
         const dateText = formatLocalizedDate(startDate);
-        console.log("✅ Available at:", dateText);
-
-        const llmText = await replyWithLLM(
-          `${promptBase}
-Current time: ${now.toISOString()}
-Requested date: ${startDate.toISOString()}
-Availability: true.`,
-          messages
+        const llmReply = await replyWithLLM(
+          SCHEDULING_PROMPT,
+          `The user requested: "${raw}". That slot is available on ${dateText}.`,
+          `Great news! *${dateText}* is available. Would you like to confirm?`
         );
 
-        await ctxFn.flowDynamic(llmText);
+        await ctxFn.flowDynamic(llmReply);
         await ctxFn.state.update({ date: startDate });
         return ctxFn.gotoFlow(confirmationFlow);
+
       } catch (err) {
-        console.error("❌ Error in date flow:", err);
-        await ctxFn.endFlow(
-          "⚠️ *Unexpected error.* Please try again in a moment. 🙏"
+        console.error("❌ Error in date flow:", err?.message || err);
+        return ctxFn.endFlow(
+          "⚠️ *Something went wrong.* Please try again in a moment. 🙏"
         );
       }
     }

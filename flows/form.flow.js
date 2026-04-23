@@ -1,5 +1,5 @@
 const { addKeyword, EVENTS } = require('@bot-whatsapp/bot');
-const { createEvent } = require("../scripts/calendar");
+const { createEvent } = require('../scripts/calendar');
 
 const formFlow = addKeyword(EVENTS.ACTION)
   .addAnswer(
@@ -7,57 +7,65 @@ const formFlow = addKeyword(EVENTS.ACTION)
     "📝 *First*, what's your full name?",
     { capture: true },
     async (ctx, ctxFn) => {
-      await ctxFn.state.update({ tempName: (ctx.body || '').trim() }); // store name temporarily
+      await ctxFn.state.update({ tempName: (ctx.body || '').trim() });
       console.log("📥 Name captured.");
     }
   )
   .addAnswer(
-    "🔢 *Thanks.* Now, what's your *reference ID*?",
+    "🔢 *Thanks.* Now, what's your *reference ID*?\n\n" +
+    "_(Type *skip* if you don't have one.)_",
     { capture: true },
     async (ctx, ctxFn) => {
       const state = await ctxFn.state.getMyState();
-      const fullName = state.tempName; // retrieve name
+      const fullName = state.tempName;
+      const refId = (ctx.body || '').trim().toLowerCase();
 
-      // Store the name together with the reference ID in `name`
-      const refId = (ctx.body || '').trim();
-      const completeName = `${fullName} - ${refId}`;
-      await ctxFn.state.update({ name: completeName });
+      // Combine name and reference ID (skip if not provided)
+      const displayName = refId === 'skip' || refId === ''
+        ? fullName
+        : `${fullName} - ${refId}`;
 
+      await ctxFn.state.update({ name: displayName });
       console.log("📥 Name and reference ID stored.");
     }
   )
   .addAnswer(
     "💼 *Perfect.* Lastly, what's the *reason* for your appointment? 📝\n\n" +
-    "Please write the reason for booking. If you already have a ticket, include it at the end to speed things up. 🔍\n\n" +
+    "Please describe your reason. If you have a support ticket, include it at the end. 🔍\n\n" +
     "*Example:*\n" +
-    "👉 *Reason:* I need assistance to update my documents on the platform.\n" +
-    "👉 *Ticket:* #123456\n\n" +
-    "This format helps us provide faster and more efficient service. 🚀",
+    "👉 I need help updating my documents. Ticket: #123456",
     { capture: true },
     async (ctx, ctxFn) => {
-      await ctxFn.state.update({ motive: (ctx.body || '').trim() });
+      await ctxFn.state.update({ reason: (ctx.body || '').trim() });
       console.log("📥 Reason stored.");
     }
   )
-  
   .addAnswer(
-    "🚀 *Appointment created successfully!* We'll see you on the agreed date. 🗓️\n\n" +
-    "💬 If you need more help, feel free to contact us. We're here for you! 🤗",
+    "⏳ *Creating your appointment...* Please wait a moment.",
     null,
     async (ctx, ctxFn) => {
       try {
-        const userInfo = await ctxFn.state.getMyState();
-        const { name, motive, date } = userInfo;
+        const { name, reason, date } = await ctxFn.state.getMyState();
+
+        if (!name || !date) {
+          console.error("❌ Missing required fields:", { name, date });
+          await ctxFn.flowDynamic(
+            "⚠️ *Something went wrong.* We couldn't find your booking details. Please start over."
+          );
+          return;
+        }
 
         console.log("📋 Creating calendar event...");
-        
-        const eventId = await createEvent(name, motive, date);
-
+        await createEvent(name, reason || 'No reason provided', date);
         console.log("✅ Event created.");
 
         await ctxFn.state.clear();
+        await ctxFn.flowDynamic(
+          "🚀 *Appointment confirmed!* We'll see you on the agreed date. 🗓️\n\n" +
+          "💬 If you need anything else, type *menu* to open the menu. We're here for you! 🤗"
+        );
       } catch (error) {
-        console.error("❌ Error creating the event:", error);
+        console.error("❌ Error creating the event:", error?.message || error);
         await ctxFn.flowDynamic(
           "⚠️ *There was a problem creating your appointment.* Please try again later. 😥"
         );
