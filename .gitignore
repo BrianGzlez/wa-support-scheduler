@@ -18,6 +18,7 @@ google.json
 *.pem
 *.key
 *.p12
+db.json
 
 # =========================
 # WhatsApp / Sessions / QR

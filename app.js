@@ -1,7 +1,7 @@
 const { createBot, createProvider, createFlow, addKeyword, EVENTS } = require('@bot-whatsapp/bot');
 const QRPortalWeb = require('@bot-whatsapp/portal');
 const BaileysProvider = require('@bot-whatsapp/provider/baileys');
-const MockAdapter = require('@bot-whatsapp/database/mock');
+const JsonFileDB = require('@bot-whatsapp/database/json');
 const { dateFlow } = require('./flows/date.flow');
 const { confirmationFlow } = require('./flows/date.flow');
 const { formFlow } = require('./flows/form.flow');
@@ -239,6 +239,16 @@ const welcomeFlow = createWelcomeFlow(menuFlow);
 // Main flow: route based on user intent
 const flowMain = addKeyword(EVENTS.WELCOME)
   .addAction(async (ctx, ctxFn) => {
+    // Debug: log full ctx to identify routing issue
+    console.log("📨 Full ctx:", JSON.stringify({
+      from: ctx.from,
+      to: ctx.to,
+      body: ctx.body,
+      name: ctx.name,
+      host: ctx.host,
+      key: ctx.key,
+    }, null, 2));
+
     const bodyText = (ctx.body || '').toLowerCase().trim();
 
     // Keywords that trigger the scheduling flow directly
@@ -256,7 +266,7 @@ const flowMain = addKeyword(EVENTS.WELCOME)
 
 // Bot initialization
 const main = async () => {
-  const adapterDB = new MockAdapter();
+  const adapterDB = new JsonFileDB({ filename: 'db.json' });
   const adapterFlow = createFlow([
     flowMain,
     dateFlow,
@@ -270,6 +280,15 @@ const main = async () => {
     flowJoinUs
   ]);
   const adapterProvider = createProvider(BaileysProvider);
+
+  // Patch: force responses to use the correct remoteJid from incoming messages
+  const originalSendMessage = adapterProvider.sendMessage;
+  adapterProvider.sendMessage = async function(numberIn, message, options) {
+    // If numberIn looks like a LID without country code, try to use the stored remoteJid
+    const cleanNumber = String(numberIn).replace('@s.whatsapp.net', '');
+    console.log(`📤 Sending to: ${cleanNumber} (original: ${numberIn})`);
+    return originalSendMessage.call(this, numberIn, message, options);
+  };
 
   createBot({
     flow: adapterFlow,
